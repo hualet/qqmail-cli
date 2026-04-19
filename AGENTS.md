@@ -39,6 +39,14 @@ IMAP_PASSWORD=...
 
 使用 [Conventional Commits](https://www.conventionalcommits.org/) 格式：`type(scope): description`，如 `fix(search): 修复日期过滤边界问题`。提交必须包含 body，交代变更内容、解决了什么问题或新增了什么功能等。
 
+提交前必须用 gitleaks 扫描敏感信息泄漏：
+
+```bash
+docker run -v $(pwd):/repo ghcr.io/gitleaks/gitleaks:latest detect --source /repo --no-git
+```
+
+扫描无泄漏才可提交。
+
 ## 注意事项
 
 - 不要在代码或文档中包含真实的公司/个人信息（邮箱、部门名等）
