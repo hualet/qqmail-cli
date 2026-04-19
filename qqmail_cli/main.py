@@ -27,6 +27,18 @@ def _strip_forwarded(content):
     return content
 
 
+def _parse_date(value):
+    if value is None:
+        return None
+    for fmt in ("%Y-%m-%d", "%Y%m%d", "%Y/%m/%d"):
+        try:
+            from datetime import datetime
+            return datetime.strptime(value, fmt).date()
+        except ValueError:
+            continue
+    raise click.BadParameter(f"无法解析日期: {value}，支持格式: YYYY-MM-DD, YYYYMMDD, YYYY/MM/DD")
+
+
 @click.group()
 @click.option("--compact", is_flag=True, help="紧凑 JSON 输出（不格式化）")
 @click.pass_context
@@ -62,13 +74,15 @@ def folders(ctx):
         sys.exit(1)
 
 
-@cli.command()
+@cli.group(invoke_without_command=True)
 @click.option("--folder", default="INBOX", help="邮箱文件夹 (默认 INBOX)")
 @click.option("--page", default=1, type=int, help="页码 (从 1 开始)")
 @click.option("--size", default=20, type=int, help="每页数量 (默认 20)")
 @click.pass_context
 def mails(ctx, folder, page, size):
     """列举邮件 (分页，按时间倒序)"""
+    if ctx.invoked_subcommand is not None:
+        return
     try:
         total = imap_client.get_message_count(folder)
         total_pages = math.ceil(total / size) if total > 0 else 0
@@ -88,6 +102,33 @@ def mails(ctx, folder, page, size):
             result["mails"] = imap_client.fetch_headers_range(folder, start, end)
 
         _json_out(ctx, result)
+    except Exception as e:
+        _json_out(ctx, {"error": str(e)})
+        sys.exit(1)
+
+
+@mails.command()
+@click.option("--since", required=True, help="起始日期 (YYYY-MM-DD)，必填")
+@click.option("--before", default=None, help="结束日期 (YYYY-MM-DD)")
+@click.option("--from", "from_addr", default=None, help="发件人过滤")
+@click.option("--subject", default=None, help="主题关键词过滤")
+@click.option("--folder", default="INBOX", help="邮箱文件夹 (默认 INBOX)")
+@click.option("--limit", default=10, type=int, help="返回结果数量 (默认 10)")
+@click.pass_context
+def search(ctx, since, before, from_addr, subject, folder, limit):
+    """搜索邮件 (必须指定 --since 日期范围)"""
+    try:
+        since_date = _parse_date(since)
+        before_date = _parse_date(before) if before else None
+        results = imap_client.search_messages(
+            since=since_date,
+            before=before_date,
+            from_addr=from_addr,
+            subject=subject,
+            folder=folder,
+            limit=limit,
+        )
+        _json_out(ctx, {"folder": folder, "total": len(results), "mails": results})
     except Exception as e:
         _json_out(ctx, {"error": str(e)})
         sys.exit(1)

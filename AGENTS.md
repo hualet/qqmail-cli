@@ -23,6 +23,7 @@ uv run ruff check qqmail_cli/ --fix  # lint 自动修复
 
 ## 关键实现细节
 
+- 腾讯企业邮箱 IMAP 的 `SEARCH FROM`/`SEARCH SUBJECT` 服务端有缺陷（返回全部结果），因此 `mails search` 只用服务端 `SINCE`/`BEFORE` 做日期过滤，再分批拉取头部字段在客户端做二次过滤（`_batch_fetch_and_filter`），每批 30 封（`BATCH_SIZE`）
 - 中文文件夹名使用 Modified UTF-7 编码，`mutf7_decode()` 做解码
 - 所有命令输出 JSON，`--compact` 全局选项控制格式化
 - `mail` 命令默认去除转发/回复的历史邮件内容，`--raw` 显示完整内容；支持三种引用格式：deepin-mail `forward-content`、腾讯邮箱 `includetail`、纯文本 `原始邮件`

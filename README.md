@@ -65,6 +65,25 @@ qqmail mails --folder "Sent Messages" --page 2
 qqmail mails --size 50
 ```
 
+### 搜索邮件
+
+`--since` 为必填参数。`--from` 和 `--subject` 为可选过滤条件。
+
+```bash
+# 搜索指定日期以来的邮件
+qqmail mails search --since 2026-04-13
+
+# 按发件人过滤
+qqmail mails search --since 2026-04-13 --from sender@example.com
+
+# 按主题关键词过滤
+qqmail mails search --since 2026-04-13 --subject 周报
+
+# 组合过滤 + 限制数量
+qqmail mails search --since 2026-04-13 --before 2026-04-20 \
+  --from sender@example.com --subject 周报 --limit 5
+```
+
 ### 查看邮件详情
 
 ```bash
@@ -99,6 +118,7 @@ qqmail attachments download 1555 -f "周报.xlsx" -o /tmp/attachments
 | `login` | 验证登录信息 |
 | `folders` | 列举邮箱文件夹 |
 | `mails` | 浏览邮件（`--folder`、`--page`、`--size`） |
+| `mails search` | 搜索邮件（`--since` 必填，`--from`/`--subject` 可选） |
 | `mail <id>` | 获取邮件详情（`--raw` 含历史邮件） |
 | `attachments list <id>` | 列出邮件附件 |
 | `attachments download <id>` | 下载附件（`-f` 指定单个，`-o` 目录） |
