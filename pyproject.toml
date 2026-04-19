@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "qqmail-cli"
-version = "0.2.0"
+version = "0.3.0"
 description = "腾讯企业邮箱 IMAP 命令行客户端"
 readme = "README.md"
 requires-python = ">=3.10"
