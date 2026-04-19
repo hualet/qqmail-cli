@@ -101,8 +101,9 @@ def search(since, before, from_addr, subject, folder, limit):
 @cli.command()
 @click.argument("msg_id")
 @click.option("--folder", default="INBOX", help="邮箱文件夹 (默认 INBOX)")
-def body(msg_id, folder):
-    """获取邮件正文内容 (原始格式)"""
+@click.option("--raw", "show_raw", is_flag=True, help="显示完整内容 (含转发/引用的历史邮件)")
+def body(msg_id, folder, show_raw):
+    """获取邮件正文内容 (默认去除转发的历史邮件)"""
     try:
         raw = imap_client.fetch_body(msg_id, folder=folder)
         msg = __import__("email").message_from_bytes(raw)
@@ -132,20 +133,31 @@ def body(msg_id, folder):
                 charset = part.get_content_charset() or "utf-8"
                 html_parts.append(payload.decode(charset, errors="replace"))
 
-        if text_parts:
-            click.echo("--- 纯文本正文 ---")
-            for t in text_parts:
-                click.echo(t)
-        if html_parts:
-            click.echo("--- HTML 正文 ---")
-            for h in html_parts:
-                click.echo(h)
-        if not text_parts and not html_parts:
+        if not show_raw:
+            text_parts = [_strip_forwarded(t) for t in text_parts]
+            html_parts = [_strip_forwarded(h) for h in html_parts]
+
+        parts = html_parts or text_parts
+        if parts:
+            for p in parts:
+                click.echo(p)
+        else:
             click.echo("(无正文内容)")
 
     except Exception as e:
         click.echo(f"获取失败: {e}", err=True)
         sys.exit(1)
+
+
+def _strip_forwarded(content):
+    html_marker = '<div class="forward-content"'
+    text_marker = "----------------------------原始邮件----------------------------"
+    html_idx = content.find(html_marker)
+    text_idx = content.find(text_marker)
+    candidates = [i for i in (html_idx, text_idx) if i > 0]
+    if candidates:
+        return content[:min(candidates)].rstrip()
+    return content
 
 
 @cli.command()

@@ -99,10 +99,18 @@ uv run main.py search --since 2026-04-01 --folder "Sent Messages"
 uv run main.py body 1555
 ```
 
-正文按 MIME 结构输出纯文本和 HTML 两个部分。指定文件夹：
+默认去除转发/引用的历史邮件内容，仅显示本邮件正文。正文按 MIME 结构输出纯文本和 HTML 两个部分。
+
+指定文件夹：
 
 ```bash
 uv run main.py body 1555 --folder "Sent Messages"
+```
+
+显示完整内容（含转发的历史邮件）：
+
+```bash
+uv run main.py body 1555 --raw
 ```
 
 ### 下载附件
@@ -131,7 +139,7 @@ uv run main.py download 1555 -o /tmp/attachments
 | `check` | 验证登录信息 |
 | `folders` | 列举邮箱文件夹 |
 | `search` | 搜索邮件（`--since` 必填） |
-| `body <msg_id>` | 获取邮件正文 |
+| `body <msg_id>` | 获取邮件正文（`--raw` 含历史邮件） |
 | `download <msg_id>` | 下载邮件附件（`-o` 指定目录） |
 
 ## 已知问题
