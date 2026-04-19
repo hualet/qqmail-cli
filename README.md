@@ -1,23 +1,29 @@
 # qqmail-cli
 
-腾讯企业邮箱 IMAP 命令行客户端，用于搜索邮件、查看正文、下载附件。
+腾讯企业邮箱 IMAP 命令行客户端，用于浏览邮件、查看正文、下载附件。所有输出均为 JSON 格式。
 
 ## 核心亮点
 
+- JSON 输出 — 所有命令输出结构化 JSON，默认格式化，`--compact` 紧凑输出
 - 零配置登录 — `.env` 文件管理账号密码，一条命令验证连通性
-- 智能搜索兼容 — 腾讯企业邮箱 IMAP 的 `FROM`/`SUBJECT` 搜索存在服务端缺陷，本工具采用 `SINCE` 日期搜索 + 本地二次过滤的策略绕过，确保结果准确
-- 中文文件夹名自动解码 — Modified UTF-7 编码的文件夹名（如 `&UXZO1mWHTvZZOQ-`）自动解码为中文（如 `其他文件夹`）
-- 纯标准库 IMAP 通信 — 不依赖第三方 IMAP 库，减少兼容性问题
-- 分批拉取 — 大量邮件自动分批请求，避免超时
+- 中文文件夹名自动解码 — Modified UTF-7 编码的文件夹名自动解码
+- 纯标准库 IMAP 通信 — 不依赖第三方 IMAP 库
 
 ## 安装
 
 依赖 [uv](https://docs.astral.sh/uv/) 管理 Python 环境和依赖：
 
 ```bash
-cd python-script
 uv sync
 ```
+
+安装后可直接使用 `qqmail` 命令：
+
+```bash
+qqmail login
+```
+
+也可通过 `uv run main.py` 执行。
 
 ## 配置
 
@@ -32,123 +38,72 @@ IMAP_PASSWORD=your_password_or_app_token
 
 ## 使用方法
 
-所有命令通过 `uv run main.py` 执行：
+所有命令默认输出格式化 JSON，加 `--compact` 输出紧凑 JSON。
 
-### 检查登录
+### 验证登录
 
 ```bash
-uv run main.py check
+qqmail login
 ```
 
 ### 列举邮箱文件夹
 
 ```bash
-uv run main.py folders
+qqmail folders
 ```
 
-输出示例：
-
-```
-  其他文件夹  (&UXZO1mWHTvZZOQ-)
-  Deleted Messages
-  Drafts
-  Sent Messages
-  INBOX
-```
-
-### 搜索邮件
-
-`--since` 为必填参数，用于限定时间范围。`--from` 和 `--subject` 为可选的二次过滤条件。
+### 浏览邮件（分页）
 
 ```bash
-# 搜索本周所有邮件
-uv run main.py search --since 2026-04-13
+# 查看 INBOX 第一页（默认每页 20 封）
+qqmail mails
 
-# 按发件人过滤
-uv run main.py search --since 2026-04-13 --from sender@example.com
+# 指定文件夹和页码
+qqmail mails --folder "Sent Messages" --page 2
 
-# 按主题关键词过滤
-uv run main.py search --since 2026-04-13 --subject 周报
+# 调整每页数量
+qqmail mails --size 50
+```
 
-# 组合过滤 + 限制数量
-uv run main.py search --since 2026-04-13 --before 2026-04-20 \
-  --from sender@example.com --subject 周报 --limit 5
+### 查看邮件详情
+
+```bash
+qqmail mail 1555
+
+# 查看完整内容（含转发的历史邮件）
+qqmail mail 1555 --raw
 
 # 指定文件夹
-uv run main.py search --since 2026-04-01 --folder "Sent Messages"
+qqmail mail 1555 --folder "Sent Messages"
 ```
 
-输出示例：
+输出包含：`id`、`from`、`to`、`cc`、`subject`、`date`、`body`、`attachments`。
 
-```
-搜索条件: SINCE 2026-04-13, FROM sender@example.com, SUBJECT 含「周报」, 文件夹: INBOX
-
-共 1 封匹配邮件:
-
---- ID: 1555 ---
-  主题: 项目周报 (2026.4.18)
-  发件人: sender@example.com <sender@example.com>
-  日期: Sat, 18 Apr 2026 14:58:04 +0800
-```
-
-### 获取邮件正文
-
-使用 `search` 获取到的邮件 ID 来查看正文内容：
+### 操作附件
 
 ```bash
-uv run main.py body 1555
-```
+# 列出附件
+qqmail attachments list 1555
 
-默认去除转发/引用的历史邮件内容，仅显示本邮件正文。正文按 MIME 结构输出纯文本和 HTML 两个部分。
+# 下载全部附件
+qqmail attachments download 1555 -o /tmp/attachments
 
-指定文件夹：
-
-```bash
-uv run main.py body 1555 --folder "Sent Messages"
-```
-
-显示完整内容（含转发的历史邮件）：
-
-```bash
-uv run main.py body 1555 --raw
-```
-
-### 下载附件
-
-```bash
-# 下载到指定目录
-uv run main.py download 1555 -o /tmp/attachments
-```
-
-输出示例：
-
-```
-找到 2 个附件:
-  周报.xlsx (15360 bytes, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet)
-  截图.png (82456 bytes, image/png)
-
-已下载 2 个附件到 /tmp/attachments:
-  /tmp/attachments/周报.xlsx
-  /tmp/attachments/截图.png
+# 只下载指定附件
+qqmail attachments download 1555 -f "周报.xlsx" -o /tmp/attachments
 ```
 
 ## 命令速查
 
 | 命令 | 说明 |
 |------|------|
-| `check` | 验证登录信息 |
+| `login` | 验证登录信息 |
 | `folders` | 列举邮箱文件夹 |
-| `search` | 搜索邮件（`--since` 必填） |
-| `body <msg_id>` | 获取邮件正文（`--raw` 含历史邮件） |
-| `download <msg_id>` | 下载邮件附件（`-o` 指定目录） |
+| `mails` | 浏览邮件（`--folder`、`--page`、`--size`） |
+| `mail <id>` | 获取邮件详情（`--raw` 含历史邮件） |
+| `attachments list <id>` | 列出邮件附件 |
+| `attachments download <id>` | 下载附件（`-f` 指定单个，`-o` 目录） |
 
-## 已知问题
-
-腾讯企业邮箱 IMAP 服务端的 `SEARCH FROM` 和 `SEARCH SUBJECT` 指令无法正确过滤结果（返回全部邮件），本工具通过以下策略绕过：
-
-1. 使用服务端可靠的 `SINCE`/`BEFORE` 日期搜索缩小范围
-2. 批量拉取候选邮件的头部字段
-3. 在客户端本地完成发件人和主题的过滤
+全局选项：`--compact` 紧凑 JSON 输出。
 
 ## 许可证
 

@@ -194,7 +194,7 @@ def list_attachments(msg_id, folder="INBOX"):
     raise click_error(f"未找到邮件 ID: {msg_id}")
 
 
-def download_attachments(msg_id, output_dir, folder="INBOX"):
+def download_attachments(msg_id, output_dir, folder="INBOX", filename=None):
     with imap_connect() as conn:
         status, _ = conn.select(folder, readonly=True)
         if status != "OK":
@@ -208,19 +208,58 @@ def download_attachments(msg_id, output_dir, folder="INBOX"):
                 out_path.mkdir(parents=True, exist_ok=True)
                 downloaded = []
                 for part in msg.walk():
-                    filename = part.get_filename()
-                    if not filename:
-                        ct = part.get("Content-Type", "")
+                    att_name = part.get_filename()
+                    if not att_name:
                         if "attachment" not in part.get("Content-Disposition", ""):
                             continue
-                        filename = "unnamed_attachment"
-                    filename = decode_str(filename)
+                        att_name = "unnamed_attachment"
+                    att_name = decode_str(att_name)
+                    if filename and att_name != filename:
+                        continue
                     payload = part.get_payload(decode=True)
                     if payload is None:
                         continue
-                    filepath = out_path / filename
+                    filepath = out_path / att_name
                     filepath.write_bytes(payload)
-                    downloaded.append(str(filepath))
+                    downloaded.append({"filename": att_name, "size": len(payload), "path": str(filepath)})
                 return downloaded
 
     raise click_error(f"未找到邮件 ID: {msg_id}")
+
+
+def get_message_count(folder="INBOX"):
+    with imap_connect() as conn:
+        status, data = conn.select(folder, readonly=True)
+        if status != "OK":
+            raise click_error(f"无法打开文件夹: {folder}")
+        return int(data[0])
+
+
+def fetch_headers_range(folder, start, end):
+    with imap_connect() as conn:
+        status, _ = conn.select(folder, readonly=True)
+        if status != "OK":
+            raise click_error(f"无法打开文件夹: {folder}")
+
+        range_str = f"{start}:{end}"
+        _, resp = conn.fetch(range_str, "(BODY.PEEK[HEADER.FIELDS (FROM TO CC SUBJECT DATE)])")
+
+        results = []
+        for item in resp:
+            if not isinstance(item, tuple):
+                continue
+            seq_num = item[0].split()[0].decode()
+            try:
+                int(seq_num)
+            except ValueError:
+                continue
+            msg = email.message_from_bytes(item[1])
+            results.append({
+                "id": seq_num,
+                "from": decode_str(msg.get("From", "")),
+                "subject": decode_str(msg.get("Subject", "")),
+                "date": decode_str(msg.get("Date", "")),
+            })
+
+        results.sort(key=lambda x: int(x["id"]), reverse=True)
+        return results
