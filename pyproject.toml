@@ -1,13 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
-name = "weekly-report-analyzer"
+name = "qqmail-cli"
 version = "0.1.0"
-description = "腾讯企业邮箱 IMAP 客户端工具"
+description = "腾讯企业邮箱 IMAP 命令行客户端"
 readme = "README.md"
 requires-python = ">=3.13"
+license = "MIT"
 dependencies = [
     "click>=8.3.2",
     "python-dotenv>=1.2.2",
 ]
 
 [project.scripts]
-mail = "main:cli"
+qqmail = "qqmail_cli.main:cli"
