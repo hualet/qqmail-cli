@@ -1,0 +1,13 @@
+[project]
+name = "weekly-report-analyzer"
+version = "0.1.0"
+description = "腾讯企业邮箱 IMAP 客户端工具"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "click>=8.3.2",
+    "python-dotenv>=1.2.2",
+]
+
+[project.scripts]
+mail = "main:cli"
