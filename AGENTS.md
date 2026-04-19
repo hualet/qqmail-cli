@@ -7,22 +7,26 @@
 ## 运行命令
 
 ```bash
-uv sync          # 安装依赖
+uv sync                # 安装依赖
+uv sync --extra dev    # 安装含 lint 工具的开发依赖
 uv run main.py <command>  # 运行 CLI
+uv run ruff check qqmail_cli/  # lint 检查
+uv run ruff check qqmail_cli/ --fix  # lint 自动修复
 ```
 
-无测试套件、无 lint/typecheck 配置。
+无测试套件。
 
 ## 架构
 
-- `main.py` — Click CLI 入口，命令：`check`, `folders`, `search`, `body`, `download`
+- `main.py` — Click CLI 入口，命令：`login`, `folders`, `mails`, `mail`, `attachments`
 - `imap_client.py` — IMAP 通信层，模块级加载 `.env`，纯标准库 `imaplib`
 
 ## 关键实现细节
 
-- 腾讯企业邮箱 IMAP 的 `SEARCH FROM`/`SEARCH SUBJECT` 服务端有缺陷（返回全部结果），因此 `search` 命令只用服务端 `SINCE`/`BEFORE` 做日期过滤，再分批拉取头部字段在客户端做二次过滤（`_batch_fetch_and_filter`），每批 30 封（`BATCH_SIZE`）
 - 中文文件夹名使用 Modified UTF-7 编码，`mutf7_decode()` 做解码
-- Python ≥ 3.13，依赖仅有 `click` 和 `python-dotenv`
+- 所有命令输出 JSON，`--compact` 全局选项控制格式化
+- `mail` 命令默认去除转发/回复的历史邮件内容，`--raw` 显示完整内容；支持三种引用格式：deepin-mail `forward-content`、腾讯邮箱 `includetail`、纯文本 `原始邮件`
+- Python ≥ 3.10，依赖仅有 `click` 和 `python-dotenv`
 
 ## 环境配置
 

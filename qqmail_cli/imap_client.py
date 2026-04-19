@@ -1,9 +1,8 @@
 import base64
-import os
-import imaplib
 import email
-from contextlib import contextmanager
-from datetime import date, timedelta
+import imaplib
+import os
+from contextlib import contextmanager, suppress
 from email.header import decode_header
 from pathlib import Path
 
@@ -62,10 +61,8 @@ def imap_connect():
         conn.login(IMAP_USER, IMAP_PASSWORD)
         yield conn
     finally:
-        try:
+        with suppress(Exception):
             conn.logout()
-        except Exception:
-            pass
 
 
 def click_error(msg):
@@ -74,7 +71,7 @@ def click_error(msg):
 
 
 def check_login():
-    with imap_connect() as conn:
+    with imap_connect():
         return IMAP_USER
 
 
